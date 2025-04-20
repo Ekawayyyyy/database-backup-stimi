@@ -1,0 +1,11 @@
+dump
+mongodump --uri "mongodb+srv://mahfudz19:zF630vcubwqBU1Kn@cluster0.ejcn2f6.mongodb.net/" --out "D:\stimi-yapmi-backup-data\25-05-2024"
+
+resotore
+mongorestore --uri "mongodb://localhost:27017" --dir "D:\stimi-yapmi-backup-data\local" --nsInclude="siakad-prod.*"
+mongorestore --uri "mongodb://localhost:27017" --dir "D:\stimi-yapmi-backup-data\24-05-2024" --nsFrom="siakad-prod.*" --nsTo="siakad-24-05-2024.*"
+
+
+perintah terbaru
+mongodump --uri=mongodb+srv://mahfudz19:zF630vcubwqBU1Kn@cluster0.ejcn2f6.mongodb.net/siakad-prod --archive=./public/25-05-2024.gzip --gzip
+mongorestore --uri "mongodb://localhost:27017" --archive=./2024-06-03T19-26-00.gzip --gzip --nsFrom="siakad-prod.*" --nsTo="siakad-2024-06-03T19-26-00.*"
