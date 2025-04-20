@@ -16,13 +16,12 @@ const config = {
   dbName: "stimi",
   folderFiles: "/var/www/files",
   folderPublic: "/var/www/html/public",
-
-  backupRoot: path.join(__dirname, "public"),
-  ojsBackupPath: path.join(__dirname, "public", "ojs"),
-  mongoBackupPath: path.join(__dirname, "public", "siakad"),
-
-  mongoUri: process.env.DB_URI || "mongodb://localhost:27017",
+  backupRoot: path.join(__dirname, process.env.BACKUP_ROOT),
+  ojsBackupPath: path.join(__dirname, process.env.OJS_BACKUP_PATH),
+  mongoBackupPath: path.join(__dirname, process.env.MONGO_BACKUP_PATH),
+  mongoUri: process.env.DB_URI || "mongodb://localhost:27017/siakad-prod",
   maxBackupKeep: process.env.PRODUCTION ? parseInt(process.env.BACK_UP_DATA_WITHIN || "30") : 5,
+  production: process.env.PRODUCTION || false,
 };
 
 function createBackupDirectories(directories) {
@@ -35,7 +34,7 @@ function createBackupDirectories(directories) {
 
 // === MAIN BACKUP FUNCTION ===
 async function runBackup() {
-  const timestamp = moment().tz("Asia/Jakarta").format("YYYY-MM-DD_HH-mm-ss");
+  const timestamp = moment().tz("Asia/Makassar").format("YYYY-MM-DD_HH-mm-ss");
   console.log(`\n⏳ [${timestamp}] Starting full backup...`);
 
   // Ensure all necessary directories exist
@@ -187,17 +186,23 @@ function backupMongoDB(timestamp) {
 //   }
 // }
 
-// === BACKUP CLEANING FUNCTION ===
+// === BACKUP CLEANING FUNCTION ===const fs = require("fs");
+function getTimestampFromFilename(filename) {
+  const match = filename.match(/(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})/);
+  return match ? new Date(match[1].replace(/_/g, ' ').replace(/-/g, ':').replace(' ', 'T')).getTime() : 0;
+}
+
+// Fungsi utama
 function cleanOldBackups() {
   const backupDirs = [
-    { path: config.ojsBackupPath, ext: '.zip' },
-    { path: config.mongoBackupPath, ext: '.gzip' },
+    { dirPath: config.ojsBackupPath, ext: ".zip" },
+    { dirPath: config.mongoBackupPath, ext: ".gzip" },
   ];
 
-  backupDirs.forEach(({ path, ext }) => {
-    fs.readdir(path, (err, files) => {
+  backupDirs.forEach(({ dirPath, ext }) => {
+    fs.readdir(dirPath, (err, files) => {
       if (err) {
-        console.error(`❌ Failed to read directory ${path}:`, err.message);
+        console.error(`❌ Gagal membaca folder ${dirPath}:`, err.message);
         return;
       }
 
@@ -212,12 +217,12 @@ function cleanOldBackups() {
       if (backupFiles.length > config.maxBackupKeep) {
         const filesToDelete = backupFiles.slice(0, backupFiles.length - config.maxBackupKeep);
         filesToDelete.forEach((file) => {
-          const filePath = path.join(path, file);
+          const filePath = path.join(dirPath, file);
           fs.unlink(filePath, (err) => {
             if (err) {
-              console.error(`❌ Failed to delete file ${file}:`, err.message);
+              console.error(`❌ Gagal menghapus file ${file}:`, err.message);
             } else {
-              console.log(`🗑️ Old file deleted: ${file}`);
+              console.log(`🗑️ File lama dihapus: ${file}`);
             }
           });
         });
@@ -226,16 +231,22 @@ function cleanOldBackups() {
   });
 }
 
-function getTimestampFromFilename(filename) {
-  const regex = /(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})/;
-  const match = filename.match(regex);
-  return match ? moment(match[1], "YYYY-MM-DD_HH-mm-ss").toDate().getTime() : 0;
+// === CRON JOB (Every 10 Minutes) ===
+if (process.env.PRODUCTION === "true") {
+  cron.schedule("0 22 * * *", () => {
+    console.log("Running daily backup at 21:00 WITA (production mode)");
+    runBackup();
+  }),
+  {
+    timezone: "Asia/Makassar",
+  };
+} else{
+  cron.schedule("*/10 * * * *", () => {
+    runBackup();
+  }),
+  {
+    timezone: "Asia/Makassar",
+  };
 }
 
-// === CRON JOB (Every 10 Minutes) ===
-cron.schedule("*/10 * * * *", () => {
-  runBackup();
-});
-
-// Initial manual run
 runBackup();
