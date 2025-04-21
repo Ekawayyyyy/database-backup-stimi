@@ -17,9 +17,10 @@
   "dependencies": {
     "archiver": "^7.0.1",
     "aws-sdk": "^2.1628.0",
+    "cron": "^4.3.0",
     "dotenv": "^16.4.5",
     "fs-extra": "^11.3.0",
-    "moment-timezone": "^0.5.45",
+    "moment-timezone": "^0.5.48",
     "node-cron": "^2.0.3"
   }
 }

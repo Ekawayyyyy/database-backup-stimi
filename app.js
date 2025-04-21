@@ -5,20 +5,21 @@ const archiver = require("archiver");
 const moment = require("moment-timezone");
 const cron = require("node-cron");
 const fsExtra = require("fs-extra");
+const { CronError } = require("cron/dist/errors");
 require("dotenv").config();
 
 // === CONFIGURATION ===
 const config = {
-  containerApp: "ojs_app_journal",
-  containerDB: "ojs_db_journal",
-  dbUser: "ojs",
-  dbPass: "setYourPass",
-  dbName: "stimi",
-  folderFiles: "/var/www/files",
-  folderPublic: "/var/www/html/public",
-  backupRoot: path.join(__dirname, process.env.BACKUP_ROOT),
-  ojsBackupPath: path.join(__dirname, process.env.OJS_BACKUP_PATH),
-  mongoBackupPath: path.join(__dirname, process.env.MONGO_BACKUP_PATH),
+  containerApp: process.env.CONTAINER_APP || "ojs_app_journal",
+  containerDB: process.env.CONTAINER_DB || "ojs_db_journal",
+  dbUser: process.env.DB_USER || "ojs",
+  dbPass: process.env.DB_PASS || "setYourPass",
+  dbName: process.env.DB_NAME || "stimi",
+  folderFiles: process.env.FILES_PATH || "/var/www/files",
+  folderPublic: process.env.PUBLIC_PATH || "/var/www/html/public",
+  backupRoot: process.env.BACKUP_ROOT || "public",
+  ojsBackupPath: process.env.OJS_BACKUP_PATH || "public/ojs",
+  mongoBackupPath: process.env.MONGO_BACKUP_PATH || "public/siakad",
   mongoUri: process.env.DB_URI || "mongodb://localhost:27017/siakad-prod",
   maxBackupKeep: process.env.PRODUCTION ? parseInt(process.env.BACK_UP_DATA_WITHIN || "30") : 5,
   production: process.env.PRODUCTION || false,
@@ -232,21 +233,16 @@ function cleanOldBackups() {
 }
 
 // === CRON JOB (Every 10 Minutes) ===
-if (process.env.PRODUCTION === "true") {
-  cron.schedule("0 22 * * *", () => {
-    console.log("Running daily backup at 21:00 WITA (production mode)");
-    runBackup();
-  }),
-  {
-    timezone: "Asia/Makassar",
-  };
-} else{
-  cron.schedule("*/10 * * * *", () => {
-    runBackup();
-  }),
-  {
-    timezone: "Asia/Makassar",
-  };
-}
+const schedule = process.env.PRODUCTION === "true" ? "20 20 * * * *" : "*/10 * * * *";
+const message = process.env.PRODUCTION === "true" 
+  ? "Running daily backup at 21:00 WITA (production mode)" 
+  : "Running backup every 10 minutes (dev mode)";
+
+cron.schedule(schedule, () => {
+  console.log(message);
+  runBackup();
+},{
+  timezone: "Asia/Singapore"
+});
 
 runBackup();
